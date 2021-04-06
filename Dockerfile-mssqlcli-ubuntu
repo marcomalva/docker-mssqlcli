@@ -1,0 +1,42 @@
+# Microsoft Server python3 ClI client mssqlcli.main:
+#
+#    python3 -m mssqlcli.main -S "db_host" -U "user_name" -d "db_name"
+#
+# History
+# ========================
+#
+# - v0.1: initial version w/o sudo
+#
+FROM ubuntu:20.04
+
+# LABEL about the custom image
+LABEL maintainer="marco@lava.ai"
+LABEL version="0.1"
+LABEL description="Docker image for Microsoft Server python3 CLI mssqlcli.main"
+
+# Disable Prompt During Packages Installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Update Ubuntu Software repository & Install missing missing apps
+RUN apt update && apt install -y bash curl wget python3 python3-pip && \
+    python3 -m pip install pip && \
+    python3 -m pip install mssql-cli
+
+# Installing .NET Runtime on Ubuntu for proper error messages
+# see <https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu#2010->
+RUN wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb && \
+   dpkg -i packages-microsoft-prod.deb && \
+   apt-get install -y apt-transport-https &&   apt-get update &&   apt-get install -y aspnetcore-runtime-5.0
+
+# Remove ability to install further packages
+RUN rm -rf /var/lib/apt/lists/* && \
+    apt clean
+
+# Add user sqladmin and set it as the user for the docker image
+RUN useradd -ms /bin/bash sqladmin
+USER sqladmin
+WORKDIR /home/sqladmin
+
+# Add a help/info line for when one starts the docker image one knowns what to do
+RUN echo "echo \"# *** Run mssqlcli with: XDG_CONFIG_HOME=/dev/shm python3 -m mssqlcli.main -S 172.31.44.147 -U admin\"|echo \"#     The XDG_CONFIG_HOME=/dev/shm is optional, -S host, -U user\"" | tr '|' '\n' >> /home/sqladmin/.bashrc
+
